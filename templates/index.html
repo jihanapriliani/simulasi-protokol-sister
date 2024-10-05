@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Protocol Application</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">Multi-Protocol Application</h1>
+
+        <!-- Tab navigation -->
+        <div class="flex justify-center mb-8">
+            <button id="mqttTab"
+                class="tab-button bg-blue-500 text-white px-4 py-2 mx-2 rounded hover:bg-blue-600">MQTT</button>
+            <button id="requestTab"
+                class="tab-button bg-blue-500 text-white px-4 py-2 mx-2 rounded hover:bg-blue-600">Request-Response</button>
+            <button id="rpcTab"
+                class="tab-button bg-blue-500 text-white px-4 py-2 mx-2 rounded hover:bg-blue-600">RPC</button>
+        </div>
+
+        <!-- MQTT Section -->
+        <div id="mqttSection" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">MQTT Client</h2>
+            <p>This section is for MQTT Client interaction.</p>
+
+            <!-- MQTT Client Controls -->
+            <div class="mb-4">
+                <label class="block">Username:</label>
+                <input type="text" id="mqttUsername" class="input-box w-full px-2 py-1 border rounded">
+            </div>
+            <div class="mb-4">
+                <label class="block">Topic:</label>
+                <input type="text" id="mqttTopic" class="input-box w-full px-2 py-1 border rounded">
+            </div>
+            <div class="mb-4">
+                <label class="block">Message:</label>
+                <input type="text" id="mqttMessage" class="input-box w-full px-2 py-1 border rounded">
+            </div>
+            <div class="mb-4">
+                <button id="mqttPublishBtn"
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Publish</button>
+            </div>
+            <div class="mb-4">
+                <label class="block">Subscriber Log:</label>
+                <textarea id="mqttSubscriberLog" class="input-box w-full px-2 py-1 border rounded" rows="6"
+                    readonly></textarea>
+            </div>
+            <div>
+                <button id="mqttSubscribeBtn"
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Subscribe</button>
+            </div>
+        </div>
+
+        <!-- Request-Response Section -->
+        <div id="requestSection" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">Request-Response</h2>
+            <p>This section is for handling request-response communications.</p>
+            <!-- Add your request-response controls here -->
+        </div>
+
+        <!-- RPC Section -->
+        <div id="rpcSection" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">RPC Client</h2>
+            <p>This section is for RPC Client interaction.</p>
+            <!-- Add your RPC client controls here -->
+        </div>
+    </div>
+
+    <!-- Include Paho MQTT Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
+    <script>
+        // Handle tab switching
+        document.getElementById('mqttTab').addEventListener('click', () => {
+            showTab('mqttSection');
+        });
+
+        document.getElementById('requestTab').addEventListener('click', () => {
+            showTab('requestSection');
+        });
+
+        document.getElementById('rpcTab').addEventListener('click', () => {
+            showTab('rpcSection');
+        });
+
+        // Function to show selected tab
+        function showTab(sectionId) {
+            const sections = document.querySelectorAll('.tab-content');
+            sections.forEach(section => section.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        // MQTT Client Initialization
+        const mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8000, 'clientId-' + parseInt(Math.random() * 100, 10));
+
+        mqttClient.onMessageArrived = function (message) {
+            const msg = JSON.parse(message.payloadString);
+            logSubscriber(`${msg.username}: ${msg.message}`);
+        }
+
+        // Connect MQTT Client
+        mqttClient.connect({
+            onSuccess: onConnect,
+            onFailure: onFail,
+        });
+
+        // MQTT Connect Success Callback
+        function onConnect() {
+            console.log('Connected to MQTT broker');
+        }
+
+        // MQTT Connect Failure Callback
+        function onFail(err) {
+            console.error('Failed to connect to MQTT broker:', err);
+        }
+
+        // MQTT Publish Button Click Event
+        document.getElementById('mqttPublishBtn').addEventListener('click', () => {
+            const username = document.getElementById('mqttUsername').value.trim();
+            const topic = document.getElementById('mqttTopic').value.trim();
+            const message = document.getElementById('mqttMessage').value.trim();
+
+            if (username && topic && message) {
+                const messageObject = {
+                    username: username,
+                    message: message
+                };
+                const messageString = JSON.stringify(messageObject);
+                const messageToSend = new Paho.MQTT.Message(messageString);
+                messageToSend.destinationName = topic;
+                mqttClient.send(messageToSend);
+            } else {
+                alert('Please fill in all fields (Username, Topic, Message)');
+            }
+        });
+
+        // MQTT Subscribe Button Click Event
+        document.getElementById('mqttSubscribeBtn').addEventListener('click', () => {
+            const topic = document.getElementById('mqttTopic').value.trim();
+
+            if (topic) {
+                mqttClient.subscribe(topic);
+                logSubscriber(`Subscribed to topic: ${topic}`);
+            } else {
+                alert('Please enter a topic to subscribe');
+            }
+        });
+
+        // Function to log subscriber messages
+        function logSubscriber(message) {
+            const logTextarea = document.getElementById('mqttSubscriberLog');
+            logTextarea.value += message + '\n';
+            logTextarea.scrollTop = logTextarea.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>
